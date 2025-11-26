@@ -92,6 +92,5 @@ int load_file(char *name)
  */
 int load_vm_code(const uint8_t *code)
 {
-    
     return 0;
 }
