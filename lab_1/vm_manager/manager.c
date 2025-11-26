@@ -12,11 +12,8 @@ int slot_id = 0;
 int create_vm(void)
 {
     int ret = -1;
-
-    kvmfd = open("/dev/kvm", O_RDWR);
-
-    vmfd = ioctl(kvmfd, KVM_CREATE_VM, 0);
-
+    // kvmfd = ...;
+    // vmfd = ...;
     return ret;
 }
 
@@ -28,17 +25,7 @@ int create_vm(void)
 int create_guest_physical_memory(size_t size)
 {
     int ret = -1;
-    memory = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-
-    struct kvm_userspace_memory_region region = 
-    {
-        .slot = 0,
-        .guest_phys_addr = 0,
-        .memory_size = size,
-        .userspace_addr = (uint64_t ) memory,
-    };
-    ret = ioctl(vmfd, KVM_SET_USER_MEMORY_REGION, &region);
-
+    // memory = ...;
     return ret;
 }
 
@@ -94,9 +81,9 @@ int launch_vm()
 
     /* Update Of The vCPU Registers - RAX, RBX and RIP */
     regs.rflags = 2;
-    regs.rax = 4;
-    regs.rbx = 2;
-    regs.rip = 0x1000;
+    // regs.rax = ...;
+    // regs.rbx = ...;
+    // regs.rip = ...;
 
     ret = ioctl(vcpufd, KVM_SET_REGS, &regs);
     if (ret == -1)
