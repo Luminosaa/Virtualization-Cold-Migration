@@ -2,3 +2,4 @@ lab_1/vm_src/bin/main
 lab_2/vm_src/bin/boot
 lab_2/vm_src/bin/main
 lab_2/vm_src/musl
+.vscode/settings.json

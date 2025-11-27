@@ -23,3 +23,15 @@ Our virtual machine contains 1 vCPU and low amount of physical memory. We do not
 ## Step 3: Running the virtual machine
 - Update the up vCPU registers -- launch_vm() in [manager:84-86](vm_manager/manager.c)
 - Run the vCPU
+
+## Step 4: Deployin the VM
+- Run the VM
+```bash 
+$ cd lab_1/vm_src
+$ make all && make run
+```
+You should have this output
+```bash
+6
+KVM_EXIT_HLT
+```
