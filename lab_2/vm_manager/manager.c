@@ -117,7 +117,7 @@ int vmexit_handler(int exit_reason)
     switch (exit_reason)
     {
     case KVM_EXIT_HLT:
-        printf("KVM_EXIT_HLT\n");
+        // printf("KVM_EXIT_HLT\n");
         return syscall_handler(memory, vcpufd);
     case KVM_EXIT_IO:
         if (run->io.direction == KVM_EXIT_IO_OUT && run->io.size == 1 && run->io.port == 0x3f8 && run->io.count == 1)

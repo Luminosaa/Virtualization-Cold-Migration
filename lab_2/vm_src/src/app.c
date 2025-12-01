@@ -6,7 +6,7 @@
 char *buff_1 = "Hello World !!!\n";
 char *buff_2 = "Bye Bye !!!\n";
 
-#define FILENAME "./caramba"
+#define FILENAME "./ay_caramba"
 
 int main(void)
 {

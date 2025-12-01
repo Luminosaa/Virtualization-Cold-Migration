@@ -6,7 +6,7 @@ Our virtual machine contains 1 vCPU and low amount of physical memory. We do not
 
 ## Step 0: Taking control of KVM 
 * Browse the [KVM API documentation](https://www.kernel.org/doc/Documentation/virt/kvm/api.txt)
-* Identify the needed ioctls for
+* Identify the needed ioctls for:
     * creating a virtual machine and virtual CPU,
     * accessing the virtual CPU registers,
     * allocating guest physical memory,
@@ -30,7 +30,7 @@ Our virtual machine contains 1 vCPU and low amount of physical memory. We do not
 $ cd lab_1/vm_src
 $ make all && make run
 ```
-You should have this output
+You should have this output:
 ```bash
 6
 KVM_EXIT_HLT

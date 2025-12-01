@@ -5,3 +5,7 @@ This objective of this project is to demystify virtualization concepts such as v
 The project is composed of 2 labs with different goals:
 * Lab1: Creating and deploying a simple virtual machine.
 * Lab2: Running a C application inside a virtual machine and handling the VM exits.
+
+Each lab contains an intruction file (INSTRUCTION.md) and its correction (CORRECTION.md).
+
+#### Contact: yves.kone@ens-lyon.fr
