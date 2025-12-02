@@ -6,7 +6,6 @@
 /* TODO */
 void SAVE()
 {
-    exit(1);
 }
 
 char *buff_1 = "Hello World !!!\n";

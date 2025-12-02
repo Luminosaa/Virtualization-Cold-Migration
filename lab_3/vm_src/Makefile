@@ -10,14 +10,15 @@ LD=ld  -m elf_x86_64
 MUSL=$(realpath musl/obj/musl-gcc)
 GCC=gcc -g
 
-all: main boot app_img
+all: save restore boot app_img
 
-run: 
-	./bin/main
+save: musl  boot app_img
+	$(GCC) ../syscall_manager/syscall_handler.c ../vm_manager/manager.c ../load_manager/loader.c ../memory_manager/memory.c src/save.c -o bin/save 
+	./bin/save
 
-main: musl  boot
-	$(GCC) ../syscall_manager/syscall_handler.c ../vm_manager/manager.c ../load_manager/loader.c ../memory_manager/memory.c src/main.c -o bin/main 
-
+restore:
+	$(GCC) ../syscall_manager/syscall_handler.c ../vm_manager/manager.c ../load_manager/loader.c ../memory_manager/memory.c src/restore.c -o bin/restore 
+	./bin/restore
 
 app_img:
 	$(MUSL) -static -c $(SRC)/app.c 

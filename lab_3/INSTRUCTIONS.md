@@ -47,7 +47,7 @@ The VM application explicitely request a SAVE operation ([app.c:21](./vm_src/src
 You shoule have this type of output:
 ```bash
 $ cd vm_src/
-$ make all && make run 
+$ make save
 ./bin/main
 OPEN ./ay_caramba 32834 511 - return 8
 WRITE 8 a07e 16 - return 16
@@ -57,15 +57,15 @@ $
 
 
 ## Step 3: RESTORE operation
+For this step you are supposed to create a main file (i.e. restore_main.c, similar to the original one) that:
 * Create a blank VM.
-* Implement the VM image reader that read the content of the VM image file and update the VM components.
+* Read the content of the VM image file and update the VM components.
 * Launch the VM (run the vCPU).
 
 You should have this type of output:
 ```bash 
 $ cd vm_src/
-$ make all && make run
-./bin/main
+$ make restore
 RESTORE OPERATION
 WRITE 8 a073 12 - return 12
 CLOSE 8 - return 0
@@ -76,4 +76,5 @@ $
 
 ### Bonus
 In this bonus part, we ask you to implement a realistic migration.
+Instead of storing the VM image on a disk, you have to transfer the VM state from a client VMM to a server VMM.
 
