@@ -2,6 +2,7 @@
 
 The objective of this first lab is to be able to run a binary code inside a micro virtual machine by completing the function called in the [main.c](vm_src/src/main.c) file.
 Our virtual machine contains 1 vCPU and low amount of physical memory. We do not consider devices (disk, network, peripherals, ...).
+The main.c file (and all the called functions) is the Virtual Machine Monitor code.
 
 ## Step 0: Taking control of KVM 
 * Browse the [KVM API documentation](https://www.kernel.org/doc/Documentation/virt/kvm/api.txt)
