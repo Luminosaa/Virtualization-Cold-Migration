@@ -74,7 +74,7 @@ $
 ```
 
 
-### Bonus
+# Bonus
 In this bonus part, we ask you to implement a realistic migration.
 Instead of storing the VM image on a disk, you have to transfer the VM state from a client VMM to a server VMM.
 
