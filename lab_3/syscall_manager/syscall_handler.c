@@ -37,22 +37,20 @@ int syscall_handler(uint8_t *memory, int vcpufd)
          */
         char *buff = &mem[arg2];
         regs.rax = write(arg1, buff, arg3);
-        printf("WRITE %lld %llx %lld - return %lld\n", arg1, arg2, arg3, regs.rax);
+        printf("VM_APP - WRITE %lld %llx %lld - return %lld\n", arg1, arg2, arg3, regs.rax);
         break;
     case 2: /* open */
         /* The same operation is applied to obtain the HVA of the path */
         char *path = &mem[arg1];
         regs.rax = open(path, arg2, arg3);
-        printf("OPEN %s %lld %lld - return %lld\n", path, arg2, arg3, regs.rax);
+        printf("VM_APP - OPEN %s %lld %lld - return %lld\n", path, arg2, arg3, regs.rax);
         break;
     case 3: /* close */
         regs.rax = close(arg1);
-        printf("CLOSE %lld - return %lld\n", arg1, regs.rax);
+        printf("VM_APP - CLOSE %lld - return %lld\n", arg1, regs.rax);
         break;
     case 60: /* exit */
-        printf("EXIT %lld\n", arg1);
-        if(arg1)
-            printf("SAVE OPERATION\n");
+        printf("VM_APP - EXIT %lld\n", arg1);
         exit(arg1);
         break;
     case 158: /* arch_prctl - USELESS HERE */
@@ -62,7 +60,7 @@ int syscall_handler(uint8_t *memory, int vcpufd)
     case 231: /* exit_group - USELESS HERE */
         break;
     default:
-        printf("undefind syscall %lld\n", regs.rax);
+        printf("VM_APP - undefind syscall %lld\n", regs.rax);
         break;
     }
 

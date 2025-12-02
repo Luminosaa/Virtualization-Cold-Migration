@@ -11,28 +11,32 @@ Thhis mechanism is usually used in the CLOUD for:
 * power saving and consolidation -- by gathering VMs on the same physical machine, you can maximize the efficiency and turn off the empty physical machines.
 
 ## VM Migration
-There are 2 types of migrations: cold migration and live migration.
-The cold migration consists of stopping the target VM, moving it to the target physical machine and finally resuming its execution. Client services deployed in a VM are hold during the migration operation.
-The live migration is a more advanced mechanism. During the migration, VM is still running on the source machine. 
-In this lab we only consider the cold migration.
+There are 2 types of migrations: **cold** migration and **live** migration.
+The cold migration consists of **stopping the target VM**, **moving it** to the target physical machine and finally **resuming its execution**. Applications deployed in a VM are hold during the migration operation.
+The live migration is a more advanced mechanism. During the migration, VM is **still running** on the source physical machine so the latency of the migration is shorter than the cold migration. 
+In this lab we **do not consider** live migration.
 
 ## Cold Migration Operation
 The cold migration is composed of 2 fundamental operations SAVE and RESTORE.
 * SAVE means stopping the VM and dump its current state in a VM image.
-    * Pause all the VM vCPUs.
+    * Pause all the VM **vCPUs**.
     * Dump the **guest pysical memory**, **vCPU registers** (privileged and unprivileged), **devices** (file descriptors), **pending IO requests**,...
-    *  Save the result in a file with a defined format on a persistent storage (i.e. disk).
+    *  **Send** (network) the dumped informations to the VMM on the target physical machine.
 * RESTORE means resuming the VM execution from its saved image.
-    * Create a blank VM.
-    * Update the blank VM state with the save image file.
+    * Create a **blank VM**.
+    * **Update** the blank VM state with the saved **image file**.
     * Run the vCPUs.
 
 
 # Instructions
+Your objective is to implement a **simplier version of cold migration**.
+For the SAVE operation, instead of sending the VM dumped information to the target physical machine, the VMM just **stores the informations in a VM image file on a persistant storage (disk)**.
+For the RESTORE operation, the VMM does not wait for VM information through the network. Instead, it will **create and deploy a new VM instance** with the information stored in the VM image file.
+
 
 ## Step 1: VM state and image file
-The VM state represents the current activity of the VM (vCPU registers, physical memory, device state, IO pending request,... ).
-The VM image is a format (file) that corresponds to the state of the VM at a given time.
+The VM state represents the current activity of the VM components (vCPU registers, physical memory, device state, IO pending request,... ).
+The VM image is a format (file) that corresponds to the current state of the VM.
 
 * List all the VM components (vCPU registers, physical memory, device state, IO pending requests,... ) that can be part of the deployed VM state.
 * Define your VM image format justify your choice.
@@ -48,13 +52,13 @@ You shoule have this type of output:
 ```bash
 $ cd vm_src/
 $ make save
-./bin/main
+./bin/save
 OPEN ./ay_caramba 32834 511 - return 8
 WRITE 8 a07e 16 - return 16
 SAVE OPERATION
 $ 
 ```
-
+The VMM exits after the performing the SAVE operation.
 
 ## Step 3: RESTORE operation
 For this step you are supposed to create a main file (i.e. restore_main.c, similar to the original one) that:
@@ -66,6 +70,7 @@ You should have this type of output:
 ```bash 
 $ cd vm_src/
 $ make restore
+./bin/restore
 RESTORE OPERATION
 WRITE 8 a073 12 - return 12
 CLOSE 8 - return 0
@@ -76,5 +81,25 @@ $
 
 # Bonus
 In this bonus part, we ask you to implement a realistic migration.
-Instead of storing the VM image on a disk, you have to transfer the VM state from a client VMM to a server VMM.
+You will run 2 VMMs: VMM_client and VMM_server.
+The first one deploys and run the provided VM.
+During the SAVE operation, the VMM_client sends the VM state to the VMM_server. This latter creates a blank VM and updates its state with the received information. It then resumes the execution of the VM.
 
+You should have this type of output:
+
+**VMM CLIENT TERMINAL**
+```bash
+VMM_CLIENT: VM_APP - OPEN ./ay_caramba 32834 511 - return 8
+VMM_CLIENT: VM_APP - WRITE 8 a07e 16 - return 16
+VMM_CLIENT: VM_APP - SAVE OPERATION
+VMM_CLIENT: VM_APP - VM STATE SENT
+VMM_CLIENT: EXITING
+```
+
+**VMM CLIENT TERMINAL**
+```bash
+VMM_SERVER: VM_APP - RESTORE OPERATION
+VMM_SERVER: VM_APP - WRITE 8 a073 12 - return 12
+VMM_SERVER: VM_APP - CLOSE 8 - return 0
+VMM_SERVER: VM_APP - EXIT 0
+```
