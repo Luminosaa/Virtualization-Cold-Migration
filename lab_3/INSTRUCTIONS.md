@@ -90,6 +90,7 @@ You should have this type of output:
 
 **vmm client terminal**
 ```bash
+$ make save
 VM_APP - OPEN ./ay_caramba 32834 511 - return 8
 VM_APP - WRITE 8 a07e 16 - return 16
 VM_APP - SAVE OPERATION
@@ -99,8 +100,18 @@ VMM EXITING
 
 **vmm server terminal**
 ```bash
+$ make restore
 VM_APP - RESTORE OPERATION
 VM_APP - WRITE 8 a073 12 - return 12
 VM_APP - CLOSE 8 - return 0
 VM_APP - EXIT 0
+```
+
+The execution should create a file (ay_caramba.txt) that contains:
+```bash
+$ cd vm_src
+$ cat ./ay_caramba
+Hello World !!!
+Bye Bye !!!
+$
 ```

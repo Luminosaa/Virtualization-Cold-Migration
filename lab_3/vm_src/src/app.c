@@ -11,7 +11,7 @@ void SAVE()
 char *buff_1 = "Hello World !!!\n";
 char *buff_2 = "Bye Bye !!!\n";
 
-#define FILENAME "./ay_caramba"
+#define FILENAME "./ay_caramba.txt"
 
 int main(void)
 {
