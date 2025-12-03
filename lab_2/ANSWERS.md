@@ -32,7 +32,7 @@ Each time the user application requests a system call (executing the "syscall" i
 The latter performs no operation, it just forwards the system call request by triggering a VM exit KVM_EXIT_HLT (due to the "hlt" instruction).
 To conclude, the VM exits observed in the previous step correspond to system calls of the VM application.
 
-**NB: Triggering a VM exit for each syscall performed in the guest is not necessarily mandatory and is a choice made here given the (simple) configuration used for this lab. In other words, in the case of a guest with user/kernel separation, syscalls could be handled without necessarily triggering VM exits.**
+**NB: Triggering a VM exit for each syscall performed in the guest is not necessarily mandatory and is a choice made here given the (simple) configuration used for this practical assignment. In other words, in the case of a guest with user/kernel separation, syscalls could be handled without necessarily triggering VM exits.**
 
 - Identify and detail these operations. ([Linux System Call Table](https://blog.rchapman.org/posts/Linux_System_Call_Table_for_x86_64/))
 

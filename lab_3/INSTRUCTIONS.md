@@ -40,9 +40,9 @@ The VM state represents the current activity of the VM components (vCPU register
 The VM image is a format (file) that corresponds to the current state of the VM.
 
 * List all the VM components (vCPU registers, physical memory, device state, IO pending requests,... ) that can be part of the deployed VM state.
-* Define your VM image format justify your choice.
+* Describe your VM image format.
 * Implementing a **dump()** function for each component (vCPU registers, physical memory, device state, IO pending requests,... ).
-
+**NB: for the vCPU registers, check the file [boot.asm](./vm_src/src/boot.asm) to identify all the different registers types used.**
 ## Step 2: SAVE operation
 The VM application explicitly requests a SAVE operation ([app.c:21](./vm_src/src/app.c)).
 * Implement the **SAVE()** function that triggers a VM exit to stop the vCPU.
