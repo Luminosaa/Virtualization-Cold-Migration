@@ -13,7 +13,7 @@ $ make alll && make run
 
 - Study and try to explain the VM application execution flow. (Check the files [boot.asm](./vm_src/src/boot.asm) and [manager.c](./vm_manager/manager.c))
 
-## Step 2: Handling VM exit
+## Step 2: Handling VM exits
 - Explain the meaning of the VM exits.
 - Identify and detail these operations. ([Linux System Call Table](https://blog.rchapman.org/posts/Linux_System_Call_Table_for_x86_64/))
 - Handle the operations performed by the VM application.

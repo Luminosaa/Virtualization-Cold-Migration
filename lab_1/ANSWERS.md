@@ -1,4 +1,4 @@
-# ScratchVM: Lab 1 - CORRECTION
+# ScratchVM: Lab 1 - ANSWERS
 
 The objective of this first lab is to be able to run a binary code inside a micro virtual machine by completing the function called in the [main.c](vm_src/src/main.c) file.
 Our virtual machine contains 1 vCPU and low amount of physical memory. We do not consider devices (disk, network, peripherals, ...).
@@ -12,7 +12,7 @@ KVM provides many services for virtual machine management.
 Each service is associated to a component (virtual machine, virtual CPU, ...) which the service operation is applied on.
 To perform such operation with KVM, the application has to call the ioctl system call with the corresponding file descriptor component.
 
-For instance, KVM_GET_LAPI Reads the Local APIC registers of the given vCPU and copies them into the input argument.
+For instance, KVM_GET_LAPI reads the Local APIC registers of the given vCPU and copies them into the input argument.
 ```
 4.57 KVM_GET_LAPIC
 
@@ -38,7 +38,7 @@ int ret = ioct(vcpu_fd, KVM_GET_LAPIC, &lapic);
 * Creating a virtual machine and virtual CPU,
 ```
 KVM_CREATE_VM: Returns a VM file descriptor that can be used to control the new virtual machine. The new VM has no virtual cpus and no memory.
-KVM_CREATE_VCPU: rReturns a vcpu file descriptor on success, -1 on error. This API adds a vcpu to a virtual machine.
+KVM_CREATE_VCPU: Returns a vcpu file descriptor on success, -1 on error. This API adds a vcpu to a virtual machine.
 ```
 * Accessing the virtual CPU registers
 ```
@@ -169,7 +169,7 @@ int load_vm_code(const uint8_t *code)
 
 
 ## Step 3: Running the virtual machine
-- Update the up vCPU registers -- launch_vm() in [manager:84-86](vm_manager/manager.c)
+- Update the vCPU registers -- launch_vm() in [manager:84-86](vm_manager/manager.c)
 ```c
 int launch_vm()
 {
@@ -212,7 +212,7 @@ int launch_vm()
 ```
 
 
-## Step 4: Deployin the VM
+## Step 4: Deploying the VM
 - Run the VM
 ```bash 
 $ cd lab_1/vm_src

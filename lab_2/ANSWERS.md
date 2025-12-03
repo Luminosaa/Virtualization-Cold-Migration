@@ -1,4 +1,4 @@
-# ScratchVM: Lab 2
+# ScratchVM: Lab 2 -- ANSWERS
 
 The objective of this second lab is to run a simple Linux C application inside a micro virtual machine.
 This virtual machine is composed of 1 vCPU and low amount of physical memory. We do not consider devices (disk, network, peripherals, ...).
@@ -16,12 +16,12 @@ The application is stucked in an infinite loop and prints "KVM_EXIT_HLT".
 
 We remind you that for running the virtual machine, the VMM calls the KVM_RUN ioctl on the bootstrap vCPU in an infinite loop.
 The messsage "KVM_EXIT_HLT" is printed by the VMM in the function vm_exit_handler.
-That means that the virtual machine triggered a VM trap due to the "hlt" instruction.
-(In virtualized mode, some instructions trigger VM trap handled by the hypervisor.)
-After handling the VM trap by printing the message, the VMM resumes the VM execution.
+That means that the virtual machine triggered a VM exit due to the "hlt" instruction.
+(In virtualized mode, some instructions trigger VM exit handled by the hypervisor.)
+After handling the VM exit by printing the message, the VMM resumes the VM execution.
 
-## Step 2: Handling VM exit
-- Explain the meaning of the VM exits.
+## Step 2: Handling VM exits
+- Explain the meaning of the VM exit.
 
 Classical Linux C application performs system call handled by the Operating System (system call handler).
 If you take a look at the VMM code (manager.c), it only loads the boot (compiled file of boot.asm) and the application codes.
@@ -29,8 +29,10 @@ The boot.asm file corresponds to the bootstrap procedure of the bootsrap vCPU.
 This procedure is executed at vCPU startup and is required to update vCPU state from 16bits Real Mode to 64bits paging mode before running the application in user mode ([16bits Real Mode](https://wiki.osdev.org/Real_Mode) - [64bits Long Mode](https://wiki.osdev.org/X86-64)).
 It is also used as a kernel, in particular for system call requests of the user application (boot.asm:85).
 Each time the user application requests a system call (executing the "syscall" instruction), the vCPU switches from user to kernel mode and jump to the syscall handler.
-The latter performs no operation, it just forwards the system call request by triggering a VM trap KVM_EXIT_HLT (due to the "hlt" instruction).
+The latter performs no operation, it just forwards the system call request by triggering a VM exit KVM_EXIT_HLT (due to the "hlt" instruction).
 To conclude, the VM exits observed in the previous step correspond to system calls of the VM application.
+
+**NB: Triggering a VM exit for each syscall performed in the guest is not necessarily mandatory and is a choice made here given the (simple) configuration used for this lab. In other words, in the case of a guest with user/kernel separation, syscalls could be handled without necessarily triggering VM exits.**
 
 - Identify and detail these operations. ([Linux System Call Table](https://blog.rchapman.org/posts/Linux_System_Call_Table_for_x86_64/))
 

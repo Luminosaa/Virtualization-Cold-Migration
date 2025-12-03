@@ -21,10 +21,10 @@ Our virtual machine contains 1 vCPU and low amount of physical memory. We do not
 - Copy the code in the guest physical memory area -- load_vm_code(code) in [loader.c:93](load_manager/loader.c)
 
 ## Step 3: Running the virtual machine
-- Update the up vCPU registers -- launch_vm() in [manager:84-86](vm_manager/manager.c)
+- Update the vCPU registers -- launch_vm() in [manager:84-86](vm_manager/manager.c)
 - Run the vCPU
 
-## Step 4: Deployin the VM
+## Step 4: Deploying the VM
 - Run the VM
 ```bash 
 $ cd lab_1/vm_src
