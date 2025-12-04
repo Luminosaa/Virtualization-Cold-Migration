@@ -34,6 +34,7 @@ struct kvm_lapic_state lapic;
 int ret = ioct(vcpu_fd, KVM_GET_LAPIC, &lapic);
 ```
 
+The following ioctl needed for:
 
 * Creating a virtual machine and virtual CPU,
 ```
