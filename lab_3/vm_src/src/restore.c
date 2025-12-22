@@ -11,9 +11,11 @@
 int main(int argc, char *argv)
 {
     /* Crate a blank VM */
+    create_vm();
+    create_bootstrap();
     
     /* Read the VM image file */
-
+    load_vm_image("vm_image.sav", /* vcpufd */ 0);
     /* Update the VM state */
 
     /* Launch the VM */

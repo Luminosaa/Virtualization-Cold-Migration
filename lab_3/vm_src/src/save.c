@@ -8,6 +8,8 @@
 #define STACK_SIZE      0x3000
 
 
+
+
 int main(int argc, char *argv)
 {
     /* creation de la machine virtuelle: RAM et vCPUs */

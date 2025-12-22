@@ -2,10 +2,11 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
-
+#include <stdlib.h>
 /* TODO */
 void SAVE()
 {
+    exit(255);
 }
 
 char *buff_1 = "Hello World !!!\n";
