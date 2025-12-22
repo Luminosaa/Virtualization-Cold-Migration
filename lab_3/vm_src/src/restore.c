@@ -15,10 +15,14 @@ int main(int argc, char *argv)
     create_bootstrap();
     
     /* Read the VM image file */
-    load_vm_image("vm_image.sav", /* vcpufd */ 0);
+    VM_image image = load_vm_image("vm_image.sav");
+    
     /* Update the VM state */
+    add_memory(image.memory_size, image.guest_memory_physical_base);
+
+    restore_from_image(&image, get_vcpufd());
 
     /* Launch the VM */
-    
+    continue_vm();
     return 0;
 }
