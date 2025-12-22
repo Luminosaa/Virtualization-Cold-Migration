@@ -3,6 +3,8 @@
 int kvmfd, vmfd, vcpufd;
 struct kvm_run *run;
 uint8_t *memory;
+uint64_t memory_start;
+uint64_t memory_size;
 int slot_id = 0;
 int create_vm(void)
 {
@@ -38,6 +40,8 @@ int add_memory(size_t size, uint64_t start)
     ret = ioctl(vmfd, KVM_SET_USER_MEMORY_REGION, &guest_region);
     if (ret == -1)
         err(1, "KVM_SET_USER_MEMORY_REGION");
+    memory_start = start;
+    memory_size = size;
     return ret;
 }
 
@@ -98,7 +102,11 @@ int launch_vm(uint64_t boot_rip, uint64_t app_rip, uint64_t sp)
     ret = ioctl(vcpufd, KVM_SET_REGS, &regs);
     if (ret == -1)
         err(1, "KVM_SET_REGS");
+    return continue_vm();
+}
 
+int continue_vm()
+{
     while (1)
     {
         if (ioctl(vcpufd, KVM_RUN, NULL) == -1)
@@ -137,6 +145,8 @@ int vmexit_handler(int exit_reason)
     case KVM_EXIT_SHUTDOWN:
         errx(1, "SHUTDOWN");
         break;
+    case 6:
+        return 1;
     default:
         errx(1, "exit_reason = 0x%d", exit_reason);
     }
@@ -146,4 +156,19 @@ int vmexit_handler(int exit_reason)
 uint8_t *get_memory()
 {
     return memory;
+}
+
+uint64_t get_memory_start()
+{
+    return memory_start;
+}
+
+uint64_t get_memory_size()
+{
+    return memory_size;
+}
+
+int get_vcpufd()
+{
+    return vcpufd;
 }

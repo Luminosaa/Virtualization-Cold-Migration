@@ -14,6 +14,7 @@
 
 #include <sys/mman.h>
 #include <sys/ioctl.h>
+
 #define DEV_KVM "/dev/kvm"
 
 #define TSS_OFSETT 0x5000
@@ -72,8 +73,12 @@ int create_vm(void);
 int add_memory(size_t, uint64_t);
 int create_bootstrap();
 int launch_vm(uint64_t, uint64_t, uint64_t);
+int continue_vm();
 int vmexit_handler(int);
 uint8_t *get_memory(void);
+uint64_t get_memory_start();
+uint64_t get_memory_size();
+int get_vcpufd();
 int setup_tss(uint32_t);
 int ident_paging(uint8_t *);
 void setup_idt();
