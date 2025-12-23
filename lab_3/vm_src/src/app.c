@@ -7,6 +7,7 @@
 void SAVE()
 {
     exit(255);
+    return;
 }
 
 char *buff_1 = "Hello World !!!\n";
