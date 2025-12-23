@@ -3,11 +3,14 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
-/* TODO */
+#include <sys/syscall.h>
+
+#define SYS_SAVE 400
+
 void SAVE()
 {
-    exit(255);
-    return;
+    // Custom syscall, exit tends to weirdly disable restoring
+    syscall(SYS_SAVE);
 }
 
 char *buff_1 = "Hello World !!!\n";
