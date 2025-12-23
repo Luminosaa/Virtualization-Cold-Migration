@@ -20,6 +20,7 @@ int main(void)
     write(fd, buff_1, strlen(buff_1));
     SAVE();
     write(fd, buff_2, strlen(buff_2));
+    write(1, "File written successfully.\n", 28);
     close(fd);
     return 0;
 }
