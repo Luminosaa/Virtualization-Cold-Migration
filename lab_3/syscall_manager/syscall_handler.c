@@ -3,6 +3,7 @@
 
 guest_file open_files[MAX_OPEN_FILES];
 uint8_t n_open_files;
+static int restored_from_snapshot = 0;
 int syscall_handler(uint8_t *memory, int vcpufd)
 {
     struct kvm_regs regs;
@@ -25,7 +26,7 @@ int syscall_handler(uint8_t *memory, int vcpufd)
      */
 
     uint8_t *mem = get_memory();
-    // printf("Syscall: %lld %lld %llx %lld\n", regs.rax, arg1, arg2, arg3);
+    printf("Syscall: %lld %lld %llx %lld\n", regs.rax, arg1, arg2, arg3);
     /* The system call number is stored in the RAX register*/
     switch (regs.rax)
     {
@@ -57,7 +58,6 @@ int syscall_handler(uint8_t *memory, int vcpufd)
                 }
             }
         }
-
         printf("VM_APP - WRITE %lld %llx %lld - return %lld\n", write_fd, arg2, arg3, regs.rax);
         break;
     case 2: /* open */
@@ -105,11 +105,6 @@ int syscall_handler(uint8_t *memory, int vcpufd)
         break;
     case 60: /* exit */
         printf("VM_APP - EXIT %lld\n", arg1);
-        if (arg1 == SAVE_EXIT_CODE)
-        {
-            save_vm_image("vm_image.sav", vcpufd);
-            arg1 = 0;
-        }
         exit(arg1);
         break;
     case 158: /* arch_prctl - USELESS HERE */
@@ -118,6 +113,16 @@ int syscall_handler(uint8_t *memory, int vcpufd)
         break;
     case 231: /* exit_group - USELESS HERE */
         break;
+    case 400: /* SAVE */
+        printf("VM_APP - SAVE requested\n");
+        if (restored_from_snapshot)
+        {
+            printf("VM_APP - already restored from snapshot, ignoring SAVE\n");
+            restored_from_snapshot = 0;
+            break;
+        }
+        save_vm_image("vm_image.sav", vcpufd);
+        exit(0);
     default:
         printf("VM_APP - undefind syscall %lld\n", regs.rax);
         break;
@@ -150,7 +155,6 @@ void dump_registers(VM_image *image, int vcpufd)
 {
     struct kvm_regs regs;
     ioctl(vcpufd, KVM_GET_REGS, &regs);
-    // Skip the current
     image->registers = regs;
 }
 
@@ -178,22 +182,86 @@ void dump_open_files(VM_image *image)
     }
 }
 
+void dump_msrs(VM_image *image, int vcpufd)
+{
+    static uint32_t wanted_msrs[] = {
+        0xC0000080, /* EFER */
+        0xC0000081, /* STAR */
+        0xC0000082, /* LSTAR */
+        0xC0000084  /* FMASK */
+    };
+
+    image->msrs.nmsrs = sizeof(wanted_msrs) / sizeof(wanted_msrs[0]);
+
+    for (uint32_t i = 0; i < image->msrs.nmsrs; i++)
+    {
+        image->msrs.entries[i].index = wanted_msrs[i];
+    }
+
+    struct kvm_msrs *msrs =
+        alloca(sizeof(struct kvm_msrs) +
+               image->msrs.nmsrs * sizeof(struct kvm_msr_entry));
+
+    msrs->nmsrs = image->msrs.nmsrs;
+    memcpy(msrs->entries, image->msrs.entries,
+           image->msrs.nmsrs * sizeof(struct kvm_msr_entry));
+
+    ioctl(vcpufd, KVM_GET_MSRS, msrs);
+
+    memcpy(image->msrs.entries, msrs->entries,
+           image->msrs.nmsrs * sizeof(struct kvm_msr_entry));
+}
+
+void dump_xsave(VM_image *image, int vcpufd)
+{
+    ioctl(vcpufd, KVM_GET_XSAVE, &image->xsave);
+}
+
+void dump_vcpu_events(VM_image *image, int vcpufd)
+{
+    ioctl(vcpufd, KVM_GET_VCPU_EVENTS, &image->vcpu_events);
+}
+
+void dump_debugregs(VM_image *image, int vcpufd)
+{
+    ioctl(vcpufd, KVM_GET_DEBUGREGS, &image->debugregs);
+}
+
+void dump_cpuid(VM_image *image, int vcpufd)
+{
+    struct kvm_cpuid2 *cpuid =
+        alloca(sizeof(*cpuid) +
+               MAX_CPUID_ENTRIES * sizeof(struct kvm_cpuid_entry2));
+
+    cpuid->nent = MAX_CPUID_ENTRIES;
+    ioctl(vcpufd, KVM_GET_SUPPORTED_CPUID, cpuid);
+
+    image->cpuid.nent = cpuid->nent;
+    memcpy(image->cpuid.entries, cpuid->entries,
+           cpuid->nent * sizeof(struct kvm_cpuid_entry2));
+}
+
+void dump_lapic(VM_image *image, int vcpufd)
+{
+    ioctl(vcpufd, KVM_GET_LAPIC, &image->lapic);
+}
+
 void save_vm_image(const char *filename, int vcpufd)
 {
-    VM_image image;
+    VM_image image = {0};
 
     dump_registers(&image, vcpufd);
     dump_sregisters(&image, vcpufd);
+    dump_msrs(&image, vcpufd);
+    dump_xsave(&image, vcpufd);
+    dump_vcpu_events(&image, vcpufd);
+    dump_debugregs(&image, vcpufd);
+    dump_lapic(&image, vcpufd);
     dump_memory(&image);
     dump_open_files(&image);
 
-    FILE *f = fopen(filename, "w");
-    if (f == NULL)
-    {
-        perror("fopen");
-        return;
-    }
-    fwrite(&image, sizeof(VM_image), 1, f);
+    FILE *f = fopen(filename, "wb");
+    fwrite(&image, sizeof(image), 1, f);
     fclose(f);
 
     print_image_info(&image);
@@ -215,31 +283,81 @@ VM_image load_vm_image(const char *filename)
     return image;
 }
 
+void restore_cpuid(VM_image *image, int vcpufd)
+{
+    struct kvm_cpuid2 *cpuid =
+        alloca(sizeof(*cpuid) +
+               image->cpuid.nent * sizeof(struct kvm_cpuid_entry2));
+
+    cpuid->nent = image->cpuid.nent;
+    memcpy(cpuid->entries, image->cpuid.entries,
+           image->cpuid.nent * sizeof(struct kvm_cpuid_entry2));
+
+    ioctl(vcpufd, KVM_SET_CPUID2, cpuid);
+}
+
+void restore_msrs(VM_image *image, int vcpufd)
+{
+    struct kvm_msrs *msrs =
+        alloca(sizeof(*msrs) +
+               image->msrs.nmsrs * sizeof(struct kvm_msr_entry));
+
+    msrs->nmsrs = image->msrs.nmsrs;
+    memcpy(msrs->entries, image->msrs.entries,
+           image->msrs.nmsrs * sizeof(struct kvm_msr_entry));
+
+    ioctl(vcpufd, KVM_SET_MSRS, msrs);
+}
+
+void restore_xsave(VM_image *image, int vcpufd)
+{
+    ioctl(vcpufd, KVM_SET_XSAVE, &image->xsave);
+}
+
+void restore_misc(VM_image *image, int vcpufd)
+{
+    ioctl(vcpufd, KVM_SET_LAPIC, &image->lapic);
+    ioctl(vcpufd, KVM_SET_VCPU_EVENTS, &image->vcpu_events);
+    ioctl(vcpufd, KVM_SET_DEBUGREGS, &image->debugregs);
+}
+
 void restore_from_image(VM_image *image, int vcpufd)
 {
-    /* Restore registers */
-    ioctl(vcpufd, KVM_SET_REGS, &image->registers);
+    /* 1. Memory */
+    memcpy(get_memory(), image->guest_memory, image->memory_size);
+
+    /* 2. CPUID */
+    restore_cpuid(image, vcpufd);
+
+    /* 3. Special registers */
     ioctl(vcpufd, KVM_SET_SREGS, &image->sregisters);
-    printf("Restored registers and sregisters.\n");
-    /* Restore memory */
-    uint8_t *memory = get_memory();
-    memcpy(memory, image->guest_memory, image->memory_size);
-    printf("Restored memory.\n");
-    /* Restore open files */
+
+    /* 4. MSRs */
+    restore_msrs(image, vcpufd);
+
+    /* 5. XSAVE */
+    restore_xsave(image, vcpufd);
+
+    /* 6. LAPIC + events + debug */
+    restore_misc(image, vcpufd);
+
+    /* 7. General registers (LAST!) */
+    ioctl(vcpufd, KVM_SET_REGS, &image->registers);
+
+    /* 8. Files */
     n_open_files = image->n_open_files;
     for (int i = 0; i < n_open_files; i++)
     {
         open_files[i] = image->open_files[i];
-        open_files[i].host_fd = open(open_files[i].path, open_files[i].flags);
-        // set the current offset
-        if (open_files[i].host_fd >= 0)
-        {
-            lseek(open_files[i].host_fd, open_files[i].offset, SEEK_SET);
-        }
+        open_files[i].host_fd =
+            open(open_files[i].path, open_files[i].flags);
+        lseek(open_files[i].host_fd,
+              open_files[i].offset, SEEK_SET);
     }
-    printf("Restored %d open files.\n", n_open_files);
-}
 
+    /* Mark that subsequent exits come from a restored VM */
+    restored_from_snapshot = 1;
+}
 void print_image_info(VM_image *image)
 {
     printf("===== VM Image Info: ======\n");
@@ -254,12 +372,47 @@ void print_image_info(VM_image *image)
     printf("RBP: %llx\n", image->registers.rbp);
     printf("RIP: %llx\n", image->registers.rip);
     printf("RFLAGS: %llx\n", image->registers.rflags);
+    printf("SRegisters:\n");
+    printf("CR0: %llx\n", image->sregisters.cr0);
+    printf("CR3: %llx\n", image->sregisters.cr3);
+    printf("CR4: %llx\n", image->sregisters.cr4);
     printf("Memory Size: %lld\n", image->memory_size);
     printf("Guest Memory Physical Base: %llx\n", image->guest_memory_physical_base);
     printf("Number of Open Files: %d\n", image->n_open_files);
     for (int i = 0; i < image->n_open_files; i++)
     {
-        printf("Open File %d (%s): Guest FD: %d, Host FD: %d, Offset: %d\n", i, image->open_files[i].path, image->open_files[i].guest_fd, image->open_files[i].host_fd, image->open_files[i].offset);
+        printf("Open File %d (%s): Guest FD: %d, Host FD: %d, Offset: %lld\n",
+               i, image->open_files[i].path,
+               image->open_files[i].guest_fd,
+               image->open_files[i].host_fd,
+               image->open_files[i].offset);
     }
+
+    // Dump full memory in mem2.txt
+    FILE *memf = fopen("mem2.txt", "w");
+    for (int i = 0; i < image->memory_size; i++)
+    {
+        fprintf(memf, "%02x ", image->guest_memory[i]);
+        if ((i + 1) % 16 == 0)
+            fprintf(memf, "\n");
+    }
+    fclose(memf);
+
+    // Dump upcoming instructions at RIP
+    uint64_t rip = image->registers.rip;
+    int nbytes = 32; // number of bytes to dump
+    if (rip + nbytes > (uint64_t)image->memory_size)
+        nbytes = image->memory_size - rip;
+
+    printf("Upcoming instructions at RIP=0x%llx:\n", rip);
+    for (int i = 0; i < nbytes; i++)
+    {
+        printf("%02x ", image->guest_memory[rip + i]);
+        if ((i + 1) % 16 == 0)
+            printf("\n");
+    }
+    if (nbytes % 16 != 0)
+        printf("\n");
+
     printf("==========================\n");
 }

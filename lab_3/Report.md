@@ -9,29 +9,64 @@ For every open file:
     guest fd; file path; open flags; file offset (to resume writes)
 
 Image format: 
-
+```C
 #define MAX_PATH_LEN 256
 #define MAX_OPEN_FILES 64
 #define MAX_MEMORY_SIZE 0xF0000
+#define MAX_MSR_ENTRIES 32
+#define MAX_CPUID_ENTRIES  64
 
 typedef struct
 {
-       int guest_fd;
-       int flags;
-       uint64_t offset;
-       char path[MAX_PATH_LEN];
+    int guest_fd;
+    int host_fd;
+    int flags;
+    uint64_t offset;
+    char path[MAX_PATH_LEN];
 } guest_file;
 
 typedef struct
 {
-       struct kvm_regs registers;
-       struct kvm_sregs sregisters;
-       int64_t memory_size;
-       int64_t guest_memory_physical_base;
-       uint8_t guest_memory[MAX_MEMORY_SIZE];
-       uint8_t n_open_files;
-       guest_file open_files[MAX_OPEN_FILES];
+    /* CPU core state */
+    struct kvm_regs registers;
+    struct kvm_sregs sregisters;
+
+    /* Model-specific registers */
+    struct {
+        uint32_t nmsrs;
+        struct kvm_msr_entry entries[MAX_MSR_ENTRIES];
+    } msrs;
+
+    /* FPU / SIMD state */
+    struct kvm_xsave xsave;
+
+    /* Pending interrupts / exceptions */
+    struct kvm_vcpu_events vcpu_events;
+
+    /* Debug registers */
+    struct kvm_debugregs debugregs;
+
+    /* CPUID configuration */
+    struct {
+        uint32_t nent;
+        struct kvm_cpuid_entry2 entries[MAX_CPUID_ENTRIES];
+    } cpuid;
+
+    /* Local APIC */
+    struct kvm_lapic_state lapic;
+
+    /* Memory */
+    int64_t memory_size;
+    int64_t guest_memory_physical_base;
+    uint8_t guest_memory[MAX_MEMORY_SIZE];
+
+    /* Files */
+    uint8_t n_open_files;
+    guest_file open_files[MAX_OPEN_FILES];
+
 } VM_image;
+```
+
 
 There must be no pointer in the data struct to easily read in / out using. 
 

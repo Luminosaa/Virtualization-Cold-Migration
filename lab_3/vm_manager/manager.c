@@ -5,6 +5,7 @@ struct kvm_run *run;
 uint8_t *memory;
 uint64_t memory_start;
 uint64_t memory_size;
+uint64_t boot_entry_point;
 int slot_id = 0;
 int create_vm(void)
 {
@@ -90,14 +91,14 @@ int create_bootstrap()
 
 int launch_vm(uint64_t boot_rip, uint64_t app_rip, uint64_t sp)
 {
-
+    boot_entry_point = boot_rip;
     int ret;
     /* Updating vCPU Registers */
     struct kvm_regs regs = {
         .rip = boot_rip, /* Setting The RIP Register To The Bootstrap Entry Point */
         .rflags = 0x2,
         .r15 = app_rip, /* User Application Entry Point */
-        .r14 = sp, /* User Application Stack Starting Address */
+        .r14 = sp,      /* User Application Stack Starting Address */
     };
     ret = ioctl(vcpufd, KVM_SET_REGS, &regs);
     if (ret == -1)
@@ -109,13 +110,10 @@ int continue_vm()
 {
     while (1)
     {
-        if (ioctl(vcpufd, KVM_RUN, NULL) == -1)
-            err(1, "KVM_RUN");
-        else
-        {
-            if (vmexit_handler(run->exit_reason) == 0)
-                break;
-        }
+        ioctl(vcpufd, KVM_RUN, NULL);
+
+        if (vmexit_handler(run->exit_reason) == 0)
+            break;
     }
     return 0;
 }
@@ -132,10 +130,14 @@ int vmexit_handler(int exit_reason)
             printf("KVM_EXIT_IO: ");
             putchar(*(((char *)run) + run->io.data_offset));
             printf("\n");
-            return 0;
+            return 1;
         }
         else
-            errx(1, "unhandled KVM_EXIT_IO %d", run->io.port == 0x3f8);
+        {
+            /* Ignore other I/O ports (e.g., port 0 from bootloader) */
+            printf("KVM_EXIT_IO: ignoring port 0x%x\n", run->io.port);
+            return 1;
+        }
         break;
     case KVM_EXIT_FAIL_ENTRY:
         errx(1, "KVM_EXIT_FAIL_ENTRY: hardware_entry_failure_reason = 0x%llx",
@@ -143,10 +145,15 @@ int vmexit_handler(int exit_reason)
     case KVM_EXIT_INTERNAL_ERROR:
         errx(1, "KVM_EXIT_INTERNAL_ERROR: suberror = 0x%x", run->internal.suberror);
     case KVM_EXIT_SHUTDOWN:
+    {
         errx(1, "SHUTDOWN");
         break;
+    }
+    case KVM_EXIT_IRQ_WINDOW_OPEN:
+        printf("KVM_EXIT_IRQ_WINDOW_OPEN\n");
+        break;
     case 6:
-        return 1;
+        break;
     default:
         errx(1, "exit_reason = 0x%d", exit_reason);
     }
