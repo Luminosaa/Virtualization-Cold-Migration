@@ -26,7 +26,7 @@ int syscall_handler(uint8_t *memory, int vcpufd)
      */
 
     uint8_t *mem = get_memory();
-    printf("Syscall: %lld %lld %llx %lld\n", regs.rax, arg1, arg2, arg3);
+
     /* The system call number is stored in the RAX register*/
     switch (regs.rax)
     {
@@ -188,7 +188,6 @@ void dump_msrs(VM_image *image, int vcpufd)
         0xC0000080, /* EFER */
         0xC0000081, /* STAR */
         0xC0000082, /* LSTAR */
-        0xC0000084  /* FMASK */
     };
 
     image->msrs.nmsrs = sizeof(wanted_msrs) / sizeof(wanted_msrs[0]);
@@ -212,38 +211,9 @@ void dump_msrs(VM_image *image, int vcpufd)
            image->msrs.nmsrs * sizeof(struct kvm_msr_entry));
 }
 
-void dump_xsave(VM_image *image, int vcpufd)
+void dump_fpu(VM_image *image, int vcpufd)
 {
-    ioctl(vcpufd, KVM_GET_XSAVE, &image->xsave);
-}
-
-void dump_vcpu_events(VM_image *image, int vcpufd)
-{
-    ioctl(vcpufd, KVM_GET_VCPU_EVENTS, &image->vcpu_events);
-}
-
-void dump_debugregs(VM_image *image, int vcpufd)
-{
-    ioctl(vcpufd, KVM_GET_DEBUGREGS, &image->debugregs);
-}
-
-void dump_cpuid(VM_image *image, int vcpufd)
-{
-    struct kvm_cpuid2 *cpuid =
-        alloca(sizeof(*cpuid) +
-               MAX_CPUID_ENTRIES * sizeof(struct kvm_cpuid_entry2));
-
-    cpuid->nent = MAX_CPUID_ENTRIES;
-    ioctl(vcpufd, KVM_GET_SUPPORTED_CPUID, cpuid);
-
-    image->cpuid.nent = cpuid->nent;
-    memcpy(image->cpuid.entries, cpuid->entries,
-           cpuid->nent * sizeof(struct kvm_cpuid_entry2));
-}
-
-void dump_lapic(VM_image *image, int vcpufd)
-{
-    ioctl(vcpufd, KVM_GET_LAPIC, &image->lapic);
+    ioctl(vcpufd, KVM_GET_FPU, &image->fpu);
 }
 
 void save_vm_image(const char *filename, int vcpufd)
@@ -253,10 +223,7 @@ void save_vm_image(const char *filename, int vcpufd)
     dump_registers(&image, vcpufd);
     dump_sregisters(&image, vcpufd);
     dump_msrs(&image, vcpufd);
-    dump_xsave(&image, vcpufd);
-    dump_vcpu_events(&image, vcpufd);
-    dump_debugregs(&image, vcpufd);
-    dump_lapic(&image, vcpufd);
+    dump_fpu(&image, vcpufd);
     dump_memory(&image);
     dump_open_files(&image);
 
@@ -283,19 +250,6 @@ VM_image load_vm_image(const char *filename)
     return image;
 }
 
-void restore_cpuid(VM_image *image, int vcpufd)
-{
-    struct kvm_cpuid2 *cpuid =
-        alloca(sizeof(*cpuid) +
-               image->cpuid.nent * sizeof(struct kvm_cpuid_entry2));
-
-    cpuid->nent = image->cpuid.nent;
-    memcpy(cpuid->entries, image->cpuid.entries,
-           image->cpuid.nent * sizeof(struct kvm_cpuid_entry2));
-
-    ioctl(vcpufd, KVM_SET_CPUID2, cpuid);
-}
-
 void restore_msrs(VM_image *image, int vcpufd)
 {
     struct kvm_msrs *msrs =
@@ -309,16 +263,9 @@ void restore_msrs(VM_image *image, int vcpufd)
     ioctl(vcpufd, KVM_SET_MSRS, msrs);
 }
 
-void restore_xsave(VM_image *image, int vcpufd)
+void restore_fpu(VM_image *image, int vcpufd)
 {
-    ioctl(vcpufd, KVM_SET_XSAVE, &image->xsave);
-}
-
-void restore_misc(VM_image *image, int vcpufd)
-{
-    ioctl(vcpufd, KVM_SET_LAPIC, &image->lapic);
-    ioctl(vcpufd, KVM_SET_VCPU_EVENTS, &image->vcpu_events);
-    ioctl(vcpufd, KVM_SET_DEBUGREGS, &image->debugregs);
+    ioctl(vcpufd, KVM_SET_FPU, &image->fpu);
 }
 
 void restore_from_image(VM_image *image, int vcpufd)
@@ -326,22 +273,16 @@ void restore_from_image(VM_image *image, int vcpufd)
     /* 1. Memory */
     memcpy(get_memory(), image->guest_memory, image->memory_size);
 
-    /* 2. CPUID */
-    restore_cpuid(image, vcpufd);
-
     /* 3. Special registers */
     ioctl(vcpufd, KVM_SET_SREGS, &image->sregisters);
 
     /* 4. MSRs */
     restore_msrs(image, vcpufd);
 
-    /* 5. XSAVE */
-    restore_xsave(image, vcpufd);
+    /* 5. FPU */
+    restore_fpu(image, vcpufd);
 
-    /* 6. LAPIC + events + debug */
-    restore_misc(image, vcpufd);
-
-    /* 7. General registers (LAST!) */
+    /* 7. General registers */
     ioctl(vcpufd, KVM_SET_REGS, &image->registers);
 
     /* 8. Files */

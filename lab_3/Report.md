@@ -14,7 +14,6 @@ Image format:
 #define MAX_OPEN_FILES 64
 #define MAX_MEMORY_SIZE 0xF0000
 #define MAX_MSR_ENTRIES 32
-#define MAX_CPUID_ENTRIES  64
 
 typedef struct
 {
@@ -38,22 +37,7 @@ typedef struct
     } msrs;
 
     /* FPU / SIMD state */
-    struct kvm_xsave xsave;
-
-    /* Pending interrupts / exceptions */
-    struct kvm_vcpu_events vcpu_events;
-
-    /* Debug registers */
-    struct kvm_debugregs debugregs;
-
-    /* CPUID configuration */
-    struct {
-        uint32_t nent;
-        struct kvm_cpuid_entry2 entries[MAX_CPUID_ENTRIES];
-    } cpuid;
-
-    /* Local APIC */
-    struct kvm_lapic_state lapic;
+    struct kvm_fpu fpu;
 
     /* Memory */
     int64_t memory_size;
