@@ -13,12 +13,20 @@ GCC=gcc -g
 all: save restore boot app_img
 
 save: musl  boot app_img
-	$(GCC) ../syscall_manager/syscall_handler.c ../vm_manager/manager.c ../load_manager/loader.c ../memory_manager/memory.c src/save.c -o bin/save 
+	$(GCC) ../syscall_manager/syscall_handler.c ../vm_migration/migration.c ../vm_manager/manager.c ../load_manager/loader.c ../memory_manager/memory.c src/save.c -o bin/save 
 	./bin/save
 
+save_client: musl  boot app_img
+	$(GCC) ../syscall_manager/syscall_handler.c ../vm_migration/migration.c ../vm_manager/manager.c ../load_manager/loader.c ../memory_manager/memory.c src/VMM_client.c -o bin/save_client
+	./bin/save_client $(ARGS)
+
 restore:
-	$(GCC) ../syscall_manager/syscall_handler.c ../vm_manager/manager.c ../load_manager/loader.c ../memory_manager/memory.c src/restore.c -o bin/restore 
+	$(GCC) ../syscall_manager/syscall_handler.c ../vm_migration/migration.c ../vm_manager/manager.c ../load_manager/loader.c ../memory_manager/memory.c src/restore.c -o bin/restore 
 	./bin/restore
+
+restore_server:
+	$(GCC) ../syscall_manager/syscall_handler.c ../vm_migration/migration.c ../vm_manager/manager.c ../load_manager/loader.c ../memory_manager/memory.c src/VMM_server.c -o bin/restore_server 
+	./bin/restore_server
 
 app_img:
 	$(MUSL) -static -c $(SRC)/app.c 

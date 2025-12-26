@@ -52,6 +52,7 @@ typedef struct
     int guest_fd;
     int host_fd;
     int flags;
+    uint32_t start_addr;
     uint64_t offset;
     char path[MAX_PATH_LEN];
 } guest_file;
