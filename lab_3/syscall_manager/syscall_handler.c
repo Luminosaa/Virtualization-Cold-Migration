@@ -1,9 +1,14 @@
+#include "stdio.h"
+#include "unistd.h"
+#include <stddef.h>
 #define _GNU_SOURCE
 #include "syscall_handler.h"
+#include "../vm_migration/migration.h"
 
 guest_file open_files[MAX_OPEN_FILES];
 uint8_t n_open_files;
 static int restored_from_snapshot = 0;
+
 int syscall_handler(uint8_t *memory, int vcpufd)
 {
     struct kvm_regs regs;
@@ -53,12 +58,15 @@ int syscall_handler(uint8_t *memory, int vcpufd)
             {
                 if (open_files[i].guest_fd == write_fd)
                 {
+                    if (open_files[i].offset == 0) { // If 1st write 
+                        open_files[i].start_addr = arg2;
+                    }
                     open_files[i].offset += regs.rax;
                     break;
                 }
             }
         }
-        printf("VM_APP - WRITE %lld %llx %lld - return %lld\n", write_fd, arg2, arg3, regs.rax);
+        printf("VM_APP - WRITE %d %llx %lld - return %lld\n", write_fd, arg2, arg3, regs.rax);
         break;
     case 2: /* open */
         /* The same operation is applied to obtain the HVA of the path */
@@ -74,6 +82,7 @@ int syscall_handler(uint8_t *memory, int vcpufd)
             open_files[n_open_files].guest_fd = regs.rax;
             open_files[n_open_files].host_fd = regs.rax;
             open_files[n_open_files].flags = arg2;
+            open_files[n_open_files].start_addr = 0;
             open_files[n_open_files].offset = 0;
             strncpy(open_files[n_open_files].path, path, MAX_PATH_LEN);
             n_open_files++;
@@ -101,7 +110,7 @@ int syscall_handler(uint8_t *memory, int vcpufd)
                 }
             }
         }
-        printf("VM_APP - CLOSE %lld - return %lld\n", close_fd, regs.rax);
+        printf("VM_APP - CLOSE %d - return %lld\n", close_fd, regs.rax);
         break;
     case 60: /* exit */
         printf("VM_APP - EXIT %lld\n", arg1);
@@ -232,6 +241,8 @@ void save_vm_image(const char *filename, int vcpufd)
     fclose(f);
 
     print_image_info(&image);
+
+    send_vm_image(&image);
 }
 
 VM_image load_vm_image(const char *filename)
@@ -286,14 +297,15 @@ void restore_from_image(VM_image *image, int vcpufd)
     ioctl(vcpufd, KVM_SET_REGS, &image->registers);
 
     /* 8. Files */
+    uint8_t *mem = get_memory();
     n_open_files = image->n_open_files;
     for (int i = 0; i < n_open_files; i++)
     {
         open_files[i] = image->open_files[i];
-        open_files[i].host_fd =
-            open(open_files[i].path, open_files[i].flags);
-        lseek(open_files[i].host_fd,
-              open_files[i].offset, SEEK_SET);
+        open_files[i].host_fd = open(open_files[i].path, open_files[i].flags);
+
+        char *buff = &mem[open_files[i].start_addr];
+        write(open_files[i].host_fd, buff, open_files[i].offset);
     }
 
     /* Mark that subsequent exits come from a restored VM */
@@ -317,15 +329,21 @@ void print_image_info(VM_image *image)
     printf("CR0: %llx\n", image->sregisters.cr0);
     printf("CR3: %llx\n", image->sregisters.cr3);
     printf("CR4: %llx\n", image->sregisters.cr4);
-    printf("Memory Size: %lld\n", image->memory_size);
-    printf("Guest Memory Physical Base: %llx\n", image->guest_memory_physical_base);
+    printf("MSRs:\n");
+    printf("Number of MSRs: %d\n", image->msrs.nmsrs); 
+    printf("EFER: %llx\n", image->msrs.entries[0]);
+    printf("STAR: %llx\n", image->msrs.entries[1]);
+    printf("LSTAR: %llx\n", image->msrs.entries[2]);
+    printf("Memory Size: %zd\n", image->memory_size);
+    printf("Guest Memory Physical Base: %zd\n", image->guest_memory_physical_base);
     printf("Number of Open Files: %d\n", image->n_open_files);
     for (int i = 0; i < image->n_open_files; i++)
     {
-        printf("Open File %d (%s): Guest FD: %d, Host FD: %d, Offset: %lld\n",
+        printf("Open File %d (%s): Guest FD: %d, Host FD: %d, Starting address: %d, Offset: %zd\n",
                i, image->open_files[i].path,
                image->open_files[i].guest_fd,
                image->open_files[i].host_fd,
+               image->open_files[i].start_addr,
                image->open_files[i].offset);
     }
 
@@ -345,7 +363,7 @@ void print_image_info(VM_image *image)
     if (rip + nbytes > (uint64_t)image->memory_size)
         nbytes = image->memory_size - rip;
 
-    printf("Upcoming instructions at RIP=0x%llx:\n", rip);
+    printf("Upcoming instructions at RIP=0x%lx:\n", rip);
     for (int i = 0; i < nbytes; i++)
     {
         printf("%02x ", image->guest_memory[rip + i]);
