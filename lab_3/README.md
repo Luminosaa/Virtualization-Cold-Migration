@@ -4,17 +4,39 @@
 
 Below you can find the folders / files that we added / modified to complete the lab.
 
-- ***syscall_manager:*** There is the functions to save / restore from an vm image. Furthermore, we have the vm image format.
+- ***syscall_manager:*** Contains the functions to save / restore from an VM image. Furthermore, we have the VM image format.
 - ***vm_migration:*** You can find the files that have the network functions.
 - ***vm_src/src:*** You will see the main programs to launch save / restore operations.
     - *save.c:* The basic save to a file locally (up to step 3).
-    - *restore.c:* The basic restore from a fil locally (up to step 3).
+    - *restore.c:* The basic restore from a file locally (up to step 3).
     - *VMM_client.c:* The client VMM to save the VM and sending it with network.
     - *VMM_server.c:* The server VMM to restore the VM by restoring it with network.
 
 ## Launch
 
-Before starting,  you should be inside the following directory: `vm_src/`
+Before starting, you should be inside the following directory: `vm_src/`
+
+### Commands
+
+Below you can find all the different commands you can use to migrate a VM.
+- **Save:**
+    - _Locally, passing by a file_:
+        ``` bash
+        make save
+        ```
+    - _Remotely, passing by network_:
+        ``` bash
+        make save_client ARGS="{port} {ip adrress of server_VMM}"
+        ```
+- **Restore:**
+    - _Locally, passing by a file_:
+        ``` bash
+        make restore
+        ```
+    - _Remotely, passing by network_:
+        ``` bash
+        make restore_server
+        ```
 
 ### Save operation
 
@@ -63,10 +85,10 @@ Upcoming instructions at RIP=0x80a1:
 ```
 
 You should also find in the `vm_src/` directory files called:
-- `vm_image.sav` corresponding to the saved vm image 
+- `vm_image.sav` corresponding to the saved VM image 
 - `mem2.txt` that is the dump of the full memory.
 - `ay_caramba.txt` that is the output of the program. 
-  - You shoud see as output in the file, after the save:
+  - You should see as output in the file, after the save:
   ``` text 
   Hello World !!!
   ```
@@ -119,7 +141,7 @@ VM_APP - EXIT 0
 
 You should also find in the `vm_src/` directory files called:
 - `ay_caramba.txt` that is the output of the program. 
-  - You shoud see as output in the file, after the restore:
+  - You should see as output in the file, after the restore:
   ``` text 
   Hello World !!!
   Bye Bye !!!
@@ -181,10 +203,10 @@ Sent 1002369 bytes
 ```
 
 You should also find in the `vm_src/` directory files called:
-- `vm_image.sav` corresponding to the saved vm image 
+- `vm_image.sav` corresponding to the saved VM image 
 - `mem2.txt` that is the dump of the full memory.
 - `ay_caramba.txt` that is the output of the program. 
-  - You shoud see as output in the file, after the save:
+  - You should see as output in the file, after the save:
   ``` text 
   Hello World !!!
   ```
@@ -241,7 +263,7 @@ VM_APP - EXIT 0
 
 You should also find in the `vm_src/` directory files called:
 - `ay_caramba.txt` that is the output of the program. 
-  - You shoud see as output in the file, after the restore:
+  - You should see as output in the file, after the restore:
   ``` text 
   Hello World !!!
   Bye Bye !!!
