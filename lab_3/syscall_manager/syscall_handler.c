@@ -82,6 +82,7 @@ int syscall_handler(uint8_t *memory, int vcpufd)
             open_files[n_open_files].guest_fd = regs.rax;
             open_files[n_open_files].host_fd = regs.rax;
             open_files[n_open_files].flags = arg2;
+            open_files[n_open_files].mode = arg3;
             open_files[n_open_files].start_addr = 0;
             open_files[n_open_files].offset = 0;
             strncpy(open_files[n_open_files].path, path, MAX_PATH_LEN);
@@ -281,28 +282,28 @@ void restore_fpu(VM_image *image, int vcpufd)
 
 void restore_from_image(VM_image *image, int vcpufd)
 {
-    /* 1. Memory */
-    memcpy(get_memory(), image->guest_memory, image->memory_size);
-
-    /* 3. Special registers */
-    ioctl(vcpufd, KVM_SET_SREGS, &image->sregisters);
-
-    /* 4. MSRs */
-    restore_msrs(image, vcpufd);
-
-    /* 5. FPU */
-    restore_fpu(image, vcpufd);
-
-    /* 7. General registers */
+    /* General registers */
     ioctl(vcpufd, KVM_SET_REGS, &image->registers);
 
-    /* 8. Files */
+    /* Special registers */
+    ioctl(vcpufd, KVM_SET_SREGS, &image->sregisters); 
+
+    /* Model-specific registers */
+    restore_msrs(image, vcpufd);
+
+    /* FPU / SIMD state (SSE)*/
+    restore_fpu(image, vcpufd);
+
+    /* Memory */
+    memcpy(get_memory(), image->guest_memory, image->memory_size);
+
+    /* Files */
     uint8_t *mem = get_memory();
     n_open_files = image->n_open_files;
     for (int i = 0; i < n_open_files; i++)
     {
         open_files[i] = image->open_files[i];
-        open_files[i].host_fd = open(open_files[i].path, open_files[i].flags);
+        open_files[i].host_fd = open(open_files[i].path, open_files[i].flags, open_files[i].mode);
 
         char *buff = &mem[open_files[i].start_addr];
         write(open_files[i].host_fd, buff, open_files[i].offset);
@@ -339,10 +340,12 @@ void print_image_info(VM_image *image)
     printf("Number of Open Files: %d\n", image->n_open_files);
     for (int i = 0; i < image->n_open_files; i++)
     {
-        printf("Open File %d (%s): Guest FD: %d, Host FD: %d, Starting address: %d, Offset: %zd\n",
+        printf("Open File %d (%s): Guest FD: %d, Host FD: %d, Flags: %d, Mode: %d, Starting address: %d, Offset: %zd\n",
                i, image->open_files[i].path,
                image->open_files[i].guest_fd,
                image->open_files[i].host_fd,
+               image->open_files[i].flags,
+               image->open_files[i].mode,
                image->open_files[i].start_addr,
                image->open_files[i].offset);
     }
